@@ -1,0 +1,5 @@
+{
+  "provider": "claude",
+  "enable_tools": true,
+  "enable_memory": true
+}

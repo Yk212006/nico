@@ -1,0 +1,5 @@
+{
+  "provider": "gemini",
+  "enable_tools": false,
+  "enable_memory": false
+}

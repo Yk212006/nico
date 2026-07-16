@@ -1,0 +1,5 @@
+{
+  "provider": "openai",
+  "enable_tools": true,
+  "enable_memory": true
+}

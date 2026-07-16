@@ -1,0 +1,16 @@
+[Unit]
+Description=NICO Raspberry Pi Assistant
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/nico
+ExecStart=/home/pi/nico/start_pi.sh
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
