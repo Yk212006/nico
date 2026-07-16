@@ -47,6 +47,20 @@ class SensorMonitor:
 
     async def read_dht(self, pin: int = 4, sensor_type: str = "DHT22") -> dict[str, Any]:
         """Read temperature/humidity from DHT sensor."""
+        result = self._try_adafruit_dht(pin, sensor_type)
+        if result:
+            return result
+
+        # Simulated fallback
+        return {
+            "status": "simulated",
+            "temperature_c": 22.5,
+            "humidity": 45.0,
+            "device": f"{sensor_type}_simulated",
+        }
+
+    @staticmethod
+    def _try_adafruit_dht(pin: int, sensor_type: str) -> dict[str, Any] | None:
         try:
             import Adafruit_DHT  # noqa: PLC0415
             sensor = Adafruit_DHT.DHT22 if sensor_type == "DHT22" else Adafruit_DHT.DHT11
@@ -61,13 +75,33 @@ class SensorMonitor:
         except Exception:
             pass
 
-        # Simulated fallback
-        return {
-            "status": "simulated",
-            "temperature_c": 22.5,
-            "humidity": 45.0,
-            "device": f"{sensor_type}_simulated",
-        }
+        try:
+            import board  # noqa: PLC0415
+            import adafruit_dht  # noqa: PLC0415
+            sensor_cls = adafruit_dht.DHT22 if sensor_type == "DHT22" else adafruit_dht.DHT11
+            pin_attr = getattr(board, f"D{pin}", None)
+            if pin_attr is None:
+                return None
+            dht = sensor_cls(pin_attr)
+            try:
+                temp = dht.temperature
+                humidity = dht.humidity
+                if humidity is not None and temp is not None:
+                    return {
+                        "status": "ok",
+                        "temperature_c": round(temp, 1),
+                        "humidity": round(humidity, 1),
+                        "device": sensor_type,
+                    }
+            finally:
+                try:
+                    dht.exit()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        return None
 
     async def read_distance(self, trigger_pin: int = 18, echo_pin: int = 24) -> dict[str, Any]:
         """Read ultrasonic sensor distance in cm."""

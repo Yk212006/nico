@@ -43,7 +43,7 @@ assistant = [
 pi = [
     "RPi.GPIO>=0.7; platform_machine in 'armv7l aarch64 armv6l'",
     "luma.oled>=3.12; platform_machine in 'armv7l aarch64 armv6l'",
-    "Adafruit-DHT>=1.4; platform_machine in 'armv7l aarch64 armv6l'",
+    "adafruit-circuitpython-dht>=3.0; platform_machine in 'armv7l aarch64 armv6l'",
 ]
 # WhatsApp Web messaging
 whatsapp = [
