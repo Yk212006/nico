@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+case "$1" in
+    remove|purge)
+        echo "NICO: Stopping and disabling systemd service..."
+        systemctl stop nico.service 2>/dev/null || true
+        systemctl disable nico.service 2>/dev/null || true
+        rm -f /etc/systemd/system/nico.service
+        systemctl daemon-reload
+        ;;
+
+    upgrade|deconfigure)
+        # Nothing to do during upgrade
+        ;;
+
+    *)
+        echo "prerm called with unknown argument: $1" >&2
+        exit 1
+        ;;
+esac

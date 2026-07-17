@@ -1,0 +1,8 @@
+nico (0.2.0) stable; urgency=medium
+
+  * Initial release for Raspberry Pi.
+  * Includes: chat (OpenAI/Claude/Gemini), hardware control,
+    Google integrations, voice pipeline, WhatsApp, OLED display,
+    camera, sensors, smart-home control, and task scheduling.
+
+ -- Yatin Kumar <yatinkumars21@gmail.com>  Thu, 17 Jul 2026 13:00:00 +0530

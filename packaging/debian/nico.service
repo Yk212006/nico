@@ -5,12 +5,16 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=yatin
-WorkingDirectory=/home/yatin/Desktop/nico-updated
-ExecStart=/home/yatin/Desktop/nico-updated/.venv/bin/python /home/yatin/Desktop/nico-updated/main.py
+User=nico
+Group=nico
+WorkingDirectory=/opt/nico
+Environment=NICO_ENV_FILE=/etc/nico/.env
+ExecStart=/opt/nico/.venv/bin/python /opt/nico/main.py
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
+StandardInput=tty
+TTYPath=/dev/tty1
 
 [Install]
 WantedBy=multi-user.target

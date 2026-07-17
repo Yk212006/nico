@@ -1,0 +1,31 @@
+Source: nico
+Section: utils
+Priority: optional
+Maintainer: Yatin Kumar <yatinkumars21@gmail.com>
+Build-Depends: debhelper-compat (= 13), dh-python, python3-all, python3-venv
+Standards-Version: 4.6.0
+Homepage: https://github.com/Yk212006/nico
+
+Package: nico
+Architecture: arm64
+Depends: ${misc:Depends}, ${python3:Depends},
+         python3 (>= 3.11),
+         python3-venv,
+         python3-dev,
+         build-essential,
+         cmake,
+         libportaudio2,
+         espeak-ng,
+         libespeak-ng-dev,
+         libopenjp2-7,
+         libtiff5,
+         libfreetype6,
+         libgpiod2,
+         python3-rpi.gpio,
+         python3-gpiozero,
+         python3-picamera2
+Description: NICO — A modular AI assistant for Raspberry Pi
+    AI-powered voice assistant with smart-home control,
+    Google Calendar/Gmail integration, WhatsApp messaging,
+    GPIO/sensor control, OLED display, camera vision,
+    and more. Runs on Raspberry Pi 3B+ and 4.
