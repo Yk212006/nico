@@ -60,9 +60,27 @@ nico/
 
 ## Installation
 
+### Raspberry Pi (.deb package — recommended)
+
+```bash
+# Download the latest .deb from releases
+wget https://github.com/Yk212006/nico/releases/latest/download/nico_0.2.0_arm64.deb
+
+# Install
+sudo dpkg -i nico_0.2.0_arm64.deb
+sudo apt install -f   # install any missing dependencies
+
+# Configure and start
+sudo nano /etc/nico/.env             # add your API keys
+sudo systemctl start nico
+sudo journalctl -u nico -f           # watch logs
+```
+
+### From source (any platform)
+
 ```bash
 # Clone and enter the project
-git clone <repo-url> nico
+git clone https://github.com/Yk212006/nico.git
 cd nico
 
 # Create virtual environment
