@@ -1,26 +1,17 @@
 from __future__ import annotations
 
+import base64
 from typing import Any
 
-from nico.integrations.google.credentials import get_credentials
+import httpx
 
-# Scopes required for Google Drive access
+from nico.integrations.google.credentials import api_get, get_credentials
+
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
 
-try:
-    from googleapiclient.discovery import build as _build
-    _GOOGLE_API = True
-except ModuleNotFoundError:
-    _GOOGLE_API = False
-
-
 class DriveIntegration:
-    """Google Drive Integration service.
-
-    Supports listing files and retrieving file details. Uses official Google API
-    libraries if configured, otherwise indicates the service is unavailable.
-    """
+    """Google Drive Integration via REST API."""
 
     def __init__(
         self,
@@ -31,30 +22,26 @@ class DriveIntegration:
         self._token_file = token_file
 
     async def list_files(self, max_results: int = 5, query: str | None = None) -> dict[str, Any]:
-        """Fetch list of files from Google Drive."""
         creds = get_credentials(SCOPES, self._credentials_file, self._token_file)
         if not creds:
             return {"status": "unavailable", "message": "Google Drive is not configured. Set GOOGLE_CREDENTIALS_FILE to enable.", "files": []}
 
-        if not _GOOGLE_API:
-            return {"status": "unavailable", "message": "Google API client libraries not installed.", "files": []}
-
         try:
-            import asyncio
-            service = _build("drive", "v3", credentials=creds)
-            loop = asyncio.get_running_loop()
+            params: dict[str, Any] = {
+                "pageSize": max_results,
+                "fields": "nextPageToken, files(id, name, mimeType, size)",
+            }
+            if query:
+                params["q"] = query
 
-            def _fetch():
-                results = service.files().list(
-                    pageSize=max_results,
-                    fields="nextPageToken, files(id, name, mimeType, size)",
-                    q=query
-                ).execute()
-                return results.get("files", [])
+            data = await api_get(
+                "https://www.googleapis.com/drive/v3/files",
+                creds,
+                params=params,
+            )
 
-            items = await loop.run_in_executor(None, _fetch)
             files = []
-            for item in items:
+            for item in data.get("files", []):
                 files.append({
                     "id": item.get("id"),
                     "name": item.get("name", "Untitled File"),
@@ -66,81 +53,80 @@ class DriveIntegration:
             return {"status": "error", "error": str(exc), "files": []}
 
     async def read_file(self, file_id: str) -> dict[str, Any]:
-        """Download and read the content of a file by its ID."""
         creds = get_credentials(SCOPES, self._credentials_file, self._token_file)
         if not creds:
             return {"status": "unavailable", "message": "Google Drive is not configured.", "content": None}
-        if not _GOOGLE_API:
-            return {"status": "unavailable", "message": "Google API client libraries not installed.", "content": None}
+
         try:
-            import asyncio
-            from io import BytesIO
-            service = _build("drive", "v3", credentials=creds)
-            loop = asyncio.get_running_loop()
+            meta = await api_get(
+                f"https://www.googleapis.com/drive/v3/files/{file_id}",
+                creds,
+                params={"fields": "id,name,mimeType,size"},
+            )
 
-            def _fetch():
-                file_meta = service.files().get(fileId=file_id, fields="id,name,mimeType,size").execute()
-                mime = file_meta.get("mimeType", "")
-                if mime.startswith("application/vnd.google-apps"):
-                    content = service.files().export(fileId=file_id, mimeType="text/plain").execute()
-                    if isinstance(content, bytes):
-                        content = content.decode("utf-8", errors="replace")
-                    return {"metadata": file_meta, "content": content}
-                request = service.files().get_media(fileId=file_id)
-                fh = BytesIO()
-                downloader = _MediaDownloader(request, fh)
-                done = False
-                while not done:
-                    status, done = downloader.next_chunk()
-                content = fh.getvalue()
-                try:
+            mime = meta.get("mimeType", "")
+            if mime.startswith("application/vnd.google-apps"):
+                content = await api_get(
+                    f"https://www.googleapis.com/drive/v3/files/{file_id}/export",
+                    creds,
+                    params={"mimeType": "text/plain"},
+                )
+                if isinstance(content, bytes):
                     content = content.decode("utf-8", errors="replace")
-                except Exception:
-                    content = base64.b64encode(content).decode("utf-8")
-                return {"metadata": file_meta, "content": content}
+                return {"status": "ok", "metadata": meta, "content": content, "source": "Google Drive"}
 
-            import base64
-            from googleapiclient.http import MediaIoBaseDownload as _MediaDownloader
-            result = await loop.run_in_executor(None, _fetch)
-            return {"status": "ok", **result, "source": "Google Drive"}
+            if creds.expired:
+                from google.auth.transport.requests import Request
+                creds.refresh(Request())
+
+            download_url = f"https://www.googleapis.com/drive/v3/files/{file_id}?alt=media"
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(
+                    download_url,
+                    headers={"Authorization": f"Bearer {creds.token}"},
+                    timeout=15,
+                )
+                resp.raise_for_status()
+                raw = resp.content
+
+            try:
+                text = raw.decode("utf-8", errors="replace")
+            except Exception:
+                text = base64.b64encode(raw).decode("utf-8")
+
+            return {"status": "ok", "metadata": meta, "content": text, "source": "Google Drive"}
         except Exception as exc:
             return {"status": "error", "error": str(exc), "content": None}
 
     async def search_files(self, query: str, max_results: int = 10) -> dict[str, Any]:
-        """Search for files by name or content query."""
         return await self.list_files(max_results=max_results, query=query)
 
     async def get_file_info(self, file_id: str) -> dict[str, Any]:
-        """Get detailed metadata for a file by ID."""
         creds = get_credentials(SCOPES, self._credentials_file, self._token_file)
         if not creds:
             return {"status": "unavailable", "message": "Google Drive is not configured.", "file": None}
-        if not _GOOGLE_API:
-            return {"status": "unavailable", "message": "Google API client libraries not installed.", "file": None}
+
         try:
-            import asyncio
-            service = _build("drive", "v3", credentials=creds)
-            loop = asyncio.get_running_loop()
+            data = await api_get(
+                f"https://www.googleapis.com/drive/v3/files/{file_id}",
+                creds,
+                params={
+                    "fields": "id,name,mimeType,size,createdTime,modifiedTime,owners,lastModifyingUser,webViewLink,description",
+                },
+            )
 
-            def _fetch():
-                return service.files().get(
-                    fileId=file_id,
-                    fields="id,name,mimeType,size,createdTime,modifiedTime,owners,lastModifyingUser,webViewLink,description"
-                ).execute()
-
-            info = await loop.run_in_executor(None, _fetch)
             return {
                 "status": "ok",
                 "file": {
-                    "id": info.get("id"),
-                    "name": info.get("name", "Untitled"),
-                    "mime_type": info.get("mimeType", ""),
-                    "size_bytes": int(info.get("size", 0)) if info.get("size") else None,
-                    "created": info.get("createdTime", ""),
-                    "modified": info.get("modifiedTime", ""),
-                    "owners": [o.get("displayName", "") for o in info.get("owners", [])],
-                    "web_link": info.get("webViewLink", ""),
-                    "description": info.get("description", ""),
+                    "id": data.get("id"),
+                    "name": data.get("name", "Untitled"),
+                    "mime_type": data.get("mimeType", ""),
+                    "size_bytes": int(data.get("size", 0)) if data.get("size") else None,
+                    "created": data.get("createdTime", ""),
+                    "modified": data.get("modifiedTime", ""),
+                    "owners": [o.get("displayName", "") for o in data.get("owners", [])],
+                    "web_link": data.get("webViewLink", ""),
+                    "description": data.get("description", ""),
                 },
                 "source": "Google Drive",
             }

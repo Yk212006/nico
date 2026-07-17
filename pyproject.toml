@@ -29,15 +29,22 @@ voice = [
 google = [
     "google-auth>=2.0",
     "google-auth-oauthlib>=1.0",
-    "google-api-python-client>=2.0",
 ]
 # Google Assistant SDK (for smart home device control via Google Home)
+# Now compatible with the google group — no protobuf conflict.
 assistant = [
     "google-auth>=2.0",
     "google-auth-oauthlib>=1.0",
     "google-assistant-grpc>=0.3",
     "grpcio>=1.40",
     "protobuf>=3.20,<5.0",
+]
+
+# All Google features (Calendar, Gmail, Drive, Classroom, Tasks + Assistant)
+# Install: pip install -e .[google,assistant]
+all-google = [
+    "nico[google]",
+    "nico[assistant]",
 ]
 # Raspberry Pi hardware
 pi = [

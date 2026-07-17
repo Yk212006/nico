@@ -6,6 +6,8 @@ import logging
 import os
 from typing import Any
 
+import httpx
+
 try:
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
@@ -22,16 +24,7 @@ def get_credentials(
     credentials_file: str | None = None,
     token_file: str | None = None,
 ) -> Any | None:
-    """Obtain OAuth2 credentials for Google APIs.
-
-    Args:
-        scopes: OAuth2 scope list for the desired API.
-        credentials_file: Path to the client secrets JSON file.
-        token_file: Path where the token will be cached.
-
-    Returns:
-        Credentials object if successful, ``None`` if unavailable.
-    """
+    """Obtain OAuth2 credentials for Google APIs."""
     if not _GOOGLE_API:
         _logger.debug("Google API libraries not installed")
         return None
@@ -88,3 +81,35 @@ def _save_token(creds: Any, token_path: str) -> None:
             token.write(creds.to_json())
     except Exception as exc:
         _logger.warning("Failed to save token: %s", exc)
+
+
+async def api_get(
+    url: str,
+    creds: Any,
+    params: dict[str, Any] | None = None,
+    timeout: float = 15.0,
+) -> dict[str, Any]:
+    """Make an authenticated GET request to a Google REST API."""
+    if creds.expired:
+        creds.refresh(Request())
+    headers = {"Authorization": f"Bearer {creds.token}"}
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url, params=params, headers=headers, timeout=timeout)
+        resp.raise_for_status()
+        return resp.json()
+
+
+async def api_post(
+    url: str,
+    creds: Any,
+    json_body: dict[str, Any] | None = None,
+    timeout: float = 15.0,
+) -> dict[str, Any]:
+    """Make an authenticated POST request to a Google REST API."""
+    if creds.expired:
+        creds.refresh(Request())
+    headers = {"Authorization": f"Bearer {creds.token}"}
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(url, json=json_body, headers=headers, timeout=timeout)
+        resp.raise_for_status()
+        return resp.json()
