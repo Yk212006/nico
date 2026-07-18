@@ -112,3 +112,7 @@ class OllamaProvider(BaseProvider):
 
     async def vision(self, prompt: str, image_bytes: bytes) -> str:
         return f"Ollama vision not yet supported. Prompt: {prompt}"
+
+    async def speech(self, text: str) -> bytes:
+        """Ollama does not provide TTS — return text as bytes."""
+        return text.encode("utf-8")
