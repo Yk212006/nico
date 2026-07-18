@@ -11,10 +11,10 @@ from pathlib import Path
 from typing import Any, AsyncIterator
 
 try:
-from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, JSONResponse
-from pydantic import BaseModel
-import uvicorn
+    from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
+    from fastapi.responses import HTMLResponse, JSONResponse
+    from pydantic import BaseModel
+    import uvicorn
 except ImportError as e:
     msg = (
         "Missing FastAPI / uvicorn. Install with: pip install nico[web]"
