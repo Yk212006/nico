@@ -1,0 +1,15 @@
+[Unit]
+Description=NICO Cloud Server
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/nico
+EnvironmentFile=/root/nico/.env
+ExecStart=/root/nico/.venv/bin/python -m nico.web_api
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

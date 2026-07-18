@@ -1,0 +1,17 @@
+[Unit]
+Description=NICO Cloud Client (Raspberry Pi)
+After=network.target
+
+[Service]
+Type=simple
+User=yatin
+WorkingDirectory=/home/yatin/nico
+Environment=NICO_CLOUD_URL=http://YOUR_CLOUD_IP:8080
+Environment=NICO_CLOUD_API_KEY=your-api-key
+Environment=NICO_DEVICE_ID=pi-3b
+ExecStart=/home/yatin/nico/.venv/bin/python -m nico.cloud_client --server http://YOUR_CLOUD_IP:8080
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
