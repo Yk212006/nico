@@ -14,6 +14,7 @@ from nico.audio import (
 from nico.bootstrap import AppBootstrap
 from nico.brain.claude_provider import ClaudeProvider
 from nico.brain.gemini_provider import GeminiProvider
+from nico.brain.ollama_provider import OllamaProvider
 from nico.brain.openai_provider import OpenAIProvider
 from nico.brain.router import ProviderRouter
 from nico.config.settings import Settings
@@ -67,6 +68,10 @@ class NicoApp:
             "gemini": GeminiProvider(
                 api_key=self.settings.gemini_api_key,
                 model=self.settings.gemini_model,
+            ),
+            "ollama": OllamaProvider(
+                base_url=self.settings.ollama_base_url,
+                model=self.settings.ollama_model,
             ),
         }
         self.router = ProviderRouter(
