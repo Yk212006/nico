@@ -72,6 +72,12 @@ HTML_PAGE = r"""<!DOCTYPE html>
         color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s}
   #send:hover{background:#d63851}
   #send:disabled{opacity:.5;cursor:not-allowed}
+  .mic-btn{padding:12px 16px;border-radius:8px;border:1px solid #2a2a4a;
+           background:#1a1a2e;color:#e0e0e0;font-size:18px;cursor:pointer;transition:all .2s}
+  .mic-btn:hover{background:#2a2a4a}
+  .toggle-label{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:#888}
+  .toggle-label input{accent-color:#e94560}
+  .toggle-text{user-select:none}
   @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
   .typing{color:#666;font-size:13px;padding:8px 16px;font-style:italic}
   ::-webkit-scrollbar{width:6px}
@@ -86,54 +92,134 @@ HTML_PAGE = r"""<!DOCTYPE html>
 </head>
 <body>
 <div id="header">
-  <span class="dot"></span>
+  <span class="dot" id="statusDot"></span>
   <h1>NICO</h1>
   <span class="sub" id="status">cloud</span>
 </div>
 <div class="actions">
   <button onclick="clearChat()">Clear</button>
-  <button onclick="toggleTheme()">Theme</button>
+  <label class="toggle-label">
+    <input type="checkbox" id="wakeToggle" onchange="toggleWake()">
+    <span class="toggle-text">Wake: OFF</span>
+  </label>
 </div>
 <div id="chat">
-  <div class="msg nico"><div class="label">NICO</div>Hello! I'm NICO running in the cloud. Ask me anything.</div>
+  <div class="msg nico"><div class="label">NICO</div>Hello! I'm NICO. Say "NICO" to activate, or type a message.</div>
 </div>
 <div id="input-area">
-  <input id="input" type="text" placeholder="Type a message..." autofocus>
+  <input id="input" type="text" placeholder="Type or tap mic to speak..." autofocus>
+  <button id="micBtn" class="mic-btn" onclick="pushToTalk()" title="Click and speak">🎤</button>
   <button id="send" onclick="send()">Send</button>
 </div>
 <script>
   const chat=document.getElementById('chat'), input=document.getElementById('input'), sendBtn=document.getElementById('send');
-  input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
-  let ws=null, reconnectTimer=null;
+  const micBtn=document.getElementById('micBtn'), wakeToggle=document.getElementById('wakeToggle');
+  const statusDot=document.getElementById('statusDot'), statusText=document.getElementById('status');
+  let ws=null, reconnectTimer=null, wakeRec=null, wakeActive=false, micActive=false;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 
-  function addMsg(sender,text,isErr){
-    const d=document.createElement('div');
-    d.className='msg '+(isErr?'error':sender);
-    if(sender==='nico') d.innerHTML='<div class="label">NICO</div>'+escapeHtml(text);
-    else d.textContent=text;
-    chat.appendChild(d); chat.scrollTop=chat.scrollHeight;
+  // ---- Wake word detection ----
+  function toggleWake(){
+    if(!SR){ addMsg('nico','Speech recognition not supported in this browser.',true); wakeToggle.checked=false; return }
+    if(wakeToggle.checked){
+      wakeActive=true;
+      document.querySelector('.toggle-text').textContent='Wake: ON';
+      addMsg('nico','Wake word active — say "NICO" then your command.');
+      startWake();
+    }else{
+      wakeActive=false;
+      document.querySelector('.toggle-text').textContent='Wake: OFF';
+      if(wakeRec) try{ wakeRec.stop() }catch(e){}
+      setStatus('idle');
+    }
   }
-  function escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-  function clearChat(){chat.innerHTML='';addMsg('nico','Chat cleared.')}
 
-  function connectWS(){
-    const proto=location.protocol==='https:'?'wss:':'ws:';
-    const url=proto+'//'+location.host+'/ws';
-    if(ws) try{ws.close()}catch(_){}
-    ws=new WebSocket(url);
-    ws.onopen=()=>{document.getElementById('status').textContent='connected - ws'};
-    ws.onmessage=e=>{
-      const typing=document.querySelector('.typing');
-      if(typing) typing.remove();
-      try{
-        const d=JSON.parse(e.data);
-        if(d.type==='token'){addMsg('nico',d.text)}
-        else if(d.type=='done'){}
-      }catch(_){addMsg('nico',e.data)}
+  function startWake(){
+    if(!wakeActive||!SR) return;
+    wakeRec=new SR();
+    wakeRec.lang='en-US';
+    wakeRec.continuous=true;
+    wakeRec.interimResults=true;
+    wakeRec.onresult=function(e){
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        const r=e.results[i];
+        if(!r.isFinal) continue;
+        const text=r[0].transcript.toLowerCase().trim();
+        if(text.includes('nico')){
+          let cmd=text.split('nico')[1].trim();
+          if(!cmd) cmd=''; // just wake word said
+          if(cmd){
+            setStatus('listening');
+            addMsg('user','🎤 '+cmd);
+            wakeRec.stop();
+            sendRaw(cmd);
+            if(wakeActive) setTimeout(startWake,500);
+          }else{
+            setStatus('awake');
+            // Listen for next utterance as command
+            wakeRec.stop();
+            const cmdRec=new SR();
+            cmdRec.lang='en-US';
+            cmdRec.interimResults=false;
+            cmdRec.onresult=function(ev){
+              const c=ev.results[0][0].transcript;
+              setStatus('listening');
+              addMsg('user','🎤 '+c);
+              sendRaw(c);
+              if(wakeActive) setTimeout(startWake,500);
+            };
+            cmdRec.onend=function(){ if(wakeActive) setTimeout(startWake,100) };
+            try{ cmdRec.start() }catch(e){}
+          }
+          break;
+        }
+      }
     };
-    ws.onclose=()=>{document.getElementById('status').textContent='reconnecting...';
-      reconnectTimer=setTimeout(connectWS,3000)};
-    ws.onerror=()=>{ws.close()};
+    wakeRec.onend=function(){ if(wakeActive) setTimeout(startWake,100) };
+    try{ wakeRec.start(); setStatus('wake-active') }catch(e){}
+  }
+
+  // ---- Push-to-talk ----
+  function pushToTalk(){
+    if(!SR){ addMsg('nico','Speech recognition not supported.',true); return }
+    if(micActive) return;
+    micActive=true;
+    micBtn.textContent='🔴';
+    setStatus('listening');
+    const rec=new SR();
+    rec.lang='en-US';
+    rec.interimResults=false;
+    rec.onresult=function(e){
+      const text=e.results[0][0].transcript;
+      addMsg('user','🎤 '+text);
+      sendRaw(text);
+    };
+    rec.onend=function(){ micActive=false; micBtn.textContent='🎤'; setStatus(wakeActive?'wake-active':'idle') };
+    rec.onerror=function(){ micActive=false; micBtn.textContent='🎤'; setStatus(wakeActive?'wake-active':'idle') };
+    try{ rec.start() }catch(e){ micActive=false; micBtn.textContent='🎤' }
+  }
+
+  // ---- Core send ----
+  async function sendRaw(msg){
+    if(!msg.trim()) return;
+    sendBtn.disabled=true;
+    const typing=document.createElement('div');
+    typing.className='typing'; typing.textContent='NICO is thinking...';
+    chat.appendChild(typing);
+    try{
+      if(ws&&ws.readyState===WebSocket.OPEN){
+        ws.send(JSON.stringify({message:msg}));
+        sendBtn.disabled=false;
+        typing.remove();
+      }else{
+        const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+        const d=await r.json();
+        typing.remove();
+        addMsg('nico',d.response||d.error||'No response');
+        if(d.error) addMsg('nico','Check server logs.',true);
+      }
+    }catch(e){ typing.remove(); addMsg('nico','Connection error.',true) }
+    sendBtn.disabled=false;
   }
 
   async function send(){
@@ -146,20 +232,58 @@ HTML_PAGE = r"""<!DOCTYPE html>
     try{
       if(ws&&ws.readyState===WebSocket.OPEN){
         ws.send(JSON.stringify({message:msg}));
-        sendBtn.disabled=false; input.focus();
-        typing.remove(); // WS will add response
-        addMsg('nico','[streaming via WebSocket]');
+        sendBtn.disabled=false; input.focus(); typing.remove();
       }else{
         const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
         const d=await r.json();
         typing.remove();
         addMsg('nico',d.response||d.error||'No response');
-        if(d.error) addMsg('nico','Check server logs for details.',true);
+        if(d.error) addMsg('nico','Check server logs.',true);
       }
-    }catch(e){typing.remove();addMsg('nico','Connection error. Is the server running?',true)}
+    }catch(e){ typing.remove(); addMsg('nico','Connection error.',true) }
     sendBtn.disabled=false; input.focus();
   }
 
+  function setStatus(s){
+    statusDot.className='dot';
+    const labels={'idle':'connected','wake-active':'wake on','awake':'NICO?','listening':'listening...','reconnecting':'reconnecting...'};
+    statusText.textContent=labels[s]||s;
+    if(s==='listening') statusDot.style.background='#f59e0b';
+    else if(s==='awake') statusDot.style.background='#3b82f6';
+    else if(s==='wake-active') statusDot.style.background='#4ade80';
+    else statusDot.style.background='#4ade80';
+  }
+
+  // ---- WebSocket ----
+  function connectWS(){
+    const proto=location.protocol==='https:'?'wss:':'ws:';
+    const url=proto+'//'+location.host+'/ws';
+    if(ws) try{ws.close()}catch(_){}
+    ws=new WebSocket(url);
+    ws.onopen=()=>{setStatus(wakeActive?'wake-active':'idle')};
+    ws.onmessage=e=>{
+      const typing=document.querySelector('.typing');
+      if(typing) typing.remove();
+      try{
+        const d=JSON.parse(e.data);
+        if(d.type==='token'){addMsg('nico',d.text)}
+        else if(d.type=='done'){}
+      }catch(_){addMsg('nico',e.data)}
+    };
+    ws.onclose=()=>{setStatus('reconnecting'); reconnectTimer=setTimeout(connectWS,3000)};
+    ws.onerror=()=>{ws.close()};
+  }
+
+  input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
+  function addMsg(sender,text,isErr){
+    const d=document.createElement('div');
+    d.className='msg '+(isErr?'error':sender);
+    if(sender==='nico') d.innerHTML='<div class="label">NICO</div>'+escapeHtml(text);
+    else d.textContent=text;
+    chat.appendChild(d); chat.scrollTop=chat.scrollHeight;
+  }
+  function escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+  function clearChat(){chat.innerHTML='';addMsg('nico','Chat cleared.')}
   connectWS();
 </script>
 </body>
