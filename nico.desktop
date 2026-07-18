@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=NICO Assistant
+Comment=AI-powered assistant with smart-home, calendar, email, and more
+Exec=/home/pi/nico/nico-launcher.sh
+Icon=/home/pi/nico/nico.png
+Terminal=false
+Categories=Utility;AI;
+StartupNotify=true
