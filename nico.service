@@ -6,8 +6,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=yatin
-WorkingDirectory=/home/yatin/Desktop/nico-updated
-ExecStart=/home/yatin/Desktop/nico-updated/.venv/bin/python /home/yatin/Desktop/nico-updated/main.py
+WorkingDirectory=/home/yatin/nico
+ExecStart=/home/yatin/nico/.venv/bin/python /home/yatin/nico/main.py
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
