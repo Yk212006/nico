@@ -407,4 +407,12 @@ class ProviderRouter:
         if lowered.startswith("use gemini") or lowered.startswith("switch to gemini"):
             self.select_provider("gemini")
             return "gemini"
+        if (
+            lowered.startswith("use google assistant")
+            or lowered.startswith("switch to google assistant")
+            or lowered.startswith("use google")
+            or lowered.startswith("switch to google")
+        ):
+            self.select_provider("google_assistant")
+            return "google_assistant"
         return None

@@ -43,11 +43,13 @@ class GoogleAssistantIntegration:
         token_file: str | None = None,
         device_model_id: str | None = None,
         device_id: str | None = None,
+        language_code: str | None = None,
     ) -> None:
         self._credentials_file = credentials_file or os.getenv("GOOGLE_CREDENTIALS_FILE")
         self._token_file = token_file or os.getenv("GOOGLE_ASSISTANT_TOKEN_FILE", "~/.nico/assistant_token.json")
         self._device_model_id = device_model_id or os.getenv("GOOGLE_ASSISTANT_DEVICE_MODEL_ID")
         self._device_id = device_id or os.getenv("GOOGLE_ASSISTANT_DEVICE_ID")
+        self._language_code = language_code or os.getenv("GOOGLE_ASSISTANT_LANGUAGE_CODE", "en-IN")
 
     @property
     def available(self) -> bool:
@@ -154,6 +156,9 @@ class GoogleAssistantIntegration:
                             encoding="LINEAR16",
                             sample_rate_hertz=16000,
                         ),
+                        dialog_state_in=embedded_assistant_pb2.DialogStateIn(
+                            language_code=self._language_code,
+                        ),
                         device_config=embedded_assistant_pb2.DeviceConfig(
                             device_id=str(self._device_id),
                             device_model_id=str(self._device_model_id),
@@ -166,7 +171,10 @@ class GoogleAssistantIntegration:
                 "query": text,
                 "display_text": "",
                 "transcript": "",
+                "audio_out": b"",
             }
+
+            audio_chunks: list[bytes] = []
 
             for resp in stub.Assist(gen()):
                 if resp.dialog_state_out.supplemental_display_text:
@@ -174,6 +182,11 @@ class GoogleAssistantIntegration:
                 if resp.speech_results:
                     parts = [sr.transcript for sr in resp.speech_results]
                     result["transcript"] += " ".join(parts)
+                if resp.audio_out.audio_data:
+                    audio_chunks.append(resp.audio_out.audio_data)
+
+            if audio_chunks:
+                result["audio_out"] = b"".join(audio_chunks)
 
             return result
 

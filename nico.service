@@ -1,16 +1,20 @@
 [Unit]
-Description=NICO AI Assistant
-After=network-online.target sound.target
-Wants=network-online.target
+Description=NICO AI Assistant — Smart Speaker
+After=network-online.target bluetooth.target sound.target
+Wants=network-online.target bluetooth.target
 
 [Service]
 Type=simple
 User=yatin
-WorkingDirectory=/home/yatin/nico
-ExecStart=/home/yatin/nico/.venv/bin/python /home/yatin/nico/main.py
+WorkingDirectory=/home/pi/nico
+ExecStart=/home/pi/nico/.venv/bin/python /home/pi/nico/main.py
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+# Bluetooth audio — wait for PulseAudio
+ExecStartPre=/usr/bin/sleep 5
 
 [Install]
 WantedBy=multi-user.target

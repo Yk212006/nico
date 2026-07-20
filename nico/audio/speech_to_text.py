@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from abc import ABC, abstractmethod
@@ -29,23 +30,48 @@ class BaseSpeechToText(ABC):
 class DefaultSpeechToText(BaseSpeechToText):
     """Speech to Text driver.
 
-    Supports Groq Whisper API (very fast) and OpenAI Whisper API, with
-    graceful offline mock transcript fallback.
+    Supports:
+    - ``google_free`` — Google Web Speech API (no key needed, free)
+    - ``groq`` — Groq Whisper API (free tier, fast, needs GROQ_API_KEY)
+    - ``whisper_openai`` — OpenAI Whisper API (needs OPENAI_API_KEY)
     """
 
     def __init__(self, provider: str | None = None, api_key: str | None = None) -> None:
-        self.provider = provider or os.getenv("STT_PROVIDER", "default")
+        self.provider = provider or os.getenv("STT_PROVIDER", "google_free")
         self.openai_key = api_key or os.getenv("OPENAI_API_KEY")
         self.groq_key = os.getenv("GROQ_API_KEY")
+        self._sr = None
+        if self.provider == "google_free":
+            try:
+                import speech_recognition as sr
+                self._sr = sr
+            except ImportError:
+                _logger.warning("speech_recognition not installed. Run: pip install SpeechRecognition")
 
     async def transcribe(self, audio_bytes: bytes) -> str:
         if not audio_bytes or len(audio_bytes) < 100:
             return ""
 
-        # 1. Groq Whisper transcription (low latency)
+        # 1. Google Web Speech API (free, no key needed)
+        if self.provider == "google_free" and self._sr:
+            try:
+                wav_data = self._pcm_to_wav(audio_bytes)
+                import io
+                recognizer = self._sr.Recognizer()
+                with io.BytesIO(wav_data) as audio_file:
+                    audio = self._sr.AudioFile(audio_file)
+                    with audio as source:
+                        audio_data = recognizer.record(source)
+                text = await asyncio.get_running_loop().run_in_executor(
+                    None, recognizer.recognize_google, audio_data
+                )
+                return text.strip()
+            except Exception as exc:
+                _logger.warning("Google Web Speech STT failed: %s", exc)
+
+        # 2. Groq Whisper transcription (low latency, free tier)
         if self.provider == "groq" and self.groq_key and _HTTPX:
             try:
-                # Wrap raw PCM to an in-memory WAV container
                 wav_data = self._pcm_to_wav(audio_bytes)
                 async with httpx.AsyncClient() as client:
                     files = {"file": ("audio.wav", wav_data, "audio/wav")}
@@ -63,7 +89,7 @@ class DefaultSpeechToText(BaseSpeechToText):
             except Exception as exc:
                 _logger.warning("Groq STT transcription failed: %s", exc)
 
-        # 2. OpenAI Whisper transcription
+        # 3. OpenAI Whisper transcription
         if self.provider == "whisper_openai" and self.openai_key and _HTTPX:
             try:
                 wav_data = self._pcm_to_wav(audio_bytes)
@@ -83,7 +109,7 @@ class DefaultSpeechToText(BaseSpeechToText):
             except Exception as exc:
                 _logger.warning("OpenAI Whisper STT failed: %s", exc)
 
-        # 3. Default Simulated / Offline fallback
+        # 4. Fallback
         return ""
 
     @staticmethod

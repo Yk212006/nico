@@ -16,7 +16,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-PROJECT_ID = "campuscircle-1fe38"
+PROJECT_ID = "optimum-legacy-502917-s8"
 MODEL_ID = "nico-assistant-v1"
 DEVICE_ID = "nico-device-1"
 SCOPE = "https://www.googleapis.com/auth/assistant-sdk-prototype"

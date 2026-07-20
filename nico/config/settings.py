@@ -20,7 +20,7 @@ class Settings:
 
     # Core identity
     assistant_name: str = os.getenv("NICO_ASSISTANT_NAME", "NICO")
-    default_provider: str = os.getenv("NICO_DEFAULT_PROVIDER", "openai")
+    default_provider: str = os.getenv("NICO_DEFAULT_PROVIDER", "google_assistant")
     log_level: str = os.getenv("NICO_LOG_LEVEL", "INFO")
 
     # Feature flags
@@ -75,6 +75,9 @@ class Settings:
     google_assistant_device_id: Optional[str] = os.getenv(
         "GOOGLE_ASSISTANT_DEVICE_ID"
     )
+    google_assistant_language_code: str = os.getenv(
+        "GOOGLE_ASSISTANT_LANGUAGE_CODE", "en-IN"
+    )
 
     # Ollama local AI
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -85,6 +88,8 @@ class Settings:
     tts_provider: str = os.getenv("TTS_PROVIDER", "default")
     openai_tts_voice: str = os.getenv("OPENAI_TTS_VOICE", "nova")
     wake_word: str = os.getenv("WAKE_WORD", "hey nico")
+    picovoice_access_key: str | None = os.getenv("PICOVOICE_ACCESS_KEY") or None
+    picovoice_keyword_path: str | None = os.getenv("PICOVOICE_KEYWORD_PATH") or None
     audio_input_device: int = int(os.getenv("AUDIO_INPUT_DEVICE", "-1"))
     audio_output_device: int = int(os.getenv("AUDIO_OUTPUT_DEVICE", "-1"))
     vad_threshold: float = float(os.getenv("NICO_VAD_THRESHOLD", "800.0"))

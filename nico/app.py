@@ -9,11 +9,14 @@ from nico.audio import (
     DefaultSpeechToText,
     DefaultTextToSpeech,
     DefaultWakeWordDetector,
+    OpenWakeWordDetector,
+    PicovoiceWakeWordDetector,
     VoicePipeline,
 )
 from nico.bootstrap import AppBootstrap
 from nico.brain.claude_provider import ClaudeProvider
 from nico.brain.gemini_provider import GeminiProvider
+from nico.brain.google_assistant_provider import GoogleAssistantProvider
 from nico.brain.ollama_provider import OllamaProvider
 from nico.brain.openai_provider import OpenAIProvider
 from nico.brain.router import ProviderRouter
@@ -21,6 +24,7 @@ from nico.config.settings import Settings
 from nico.config.prompts import PromptTemplates
 from nico.context import ConversationContext
 from nico.integrations.google.dispatcher import GoogleServiceDispatcher
+from nico.integrations.google_assistant import GoogleAssistantIntegration
 from nico.lifecycle import AppLifecycle
 from nico.memory.manager import MemoryManager
 from nico.orchestrator import IntentOrchestrator
@@ -72,6 +76,15 @@ class NicoApp:
             "ollama": OllamaProvider(
                 base_url=self.settings.ollama_base_url,
                 model=self.settings.ollama_model,
+            ),
+            "google_assistant": GoogleAssistantProvider(
+                integration=GoogleAssistantIntegration(
+                    credentials_file=self.settings.google_credentials_file,
+                    token_file=self.settings.google_assistant_token_file,
+                    device_model_id=self.settings.google_assistant_device_model_id,
+                    device_id=self.settings.google_assistant_device_id,
+                    language_code=self.settings.google_assistant_language_code,
+                )
             ),
         }
         self.router = ProviderRouter(
@@ -266,9 +279,29 @@ class NicoApp:
                 provider=self.settings.tts_provider,
                 api_key=self.settings.openai_api_key,
             )
-            ww = DefaultWakeWordDetector(
-                wake_word=self.settings.wake_word,
-            )
+            if self.settings.picovoice_access_key:
+                try:
+                    ww = PicovoiceWakeWordDetector(
+                        access_key=self.settings.picovoice_access_key,
+                        keyword_path=self.settings.picovoice_keyword_path,
+                    )
+                    log_event(self.logger, "wakeword_picovoice")
+                except Exception as exc:
+                    log_error(self.logger, "wakeword_picovoice_failed", exc)
+                    ww = DefaultWakeWordDetector(
+                        wake_word=self.settings.wake_word,
+                    )
+            else:
+                try:
+                    ww = OpenWakeWordDetector(
+                        wake_word=self.settings.wake_word,
+                    )
+                    log_event(self.logger, "wakeword_openwakeword")
+                except Exception as exc:
+                    log_error(self.logger, "wakeword_openwakeword_failed", exc)
+                    ww = DefaultWakeWordDetector(
+                        wake_word=self.settings.wake_word,
+                    )
 
             async def _handler(text: str) -> str:
                 return await self.chat(text)

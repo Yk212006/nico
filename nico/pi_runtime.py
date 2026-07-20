@@ -27,11 +27,14 @@ def is_raspberry_pi() -> bool:
 def build_pi_settings() -> Settings:
     return Settings(
         assistant_name=os.getenv("NICO_ASSISTANT_NAME", "NICO Pi"),
-        default_provider=os.getenv("NICO_DEFAULT_PROVIDER", "openai"),
+        default_provider=os.getenv("NICO_DEFAULT_PROVIDER", "google_assistant"),
         log_level=os.getenv("NICO_LOG_LEVEL", "INFO"),
         openai_api_key=os.getenv("OPENAI_API_KEY"),
-        anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
-        gemini_api_key=os.getenv("GEMINI_API_KEY"),
         enable_tools=os.getenv("NICO_ENABLE_TOOLS", "true").lower() == "true",
         enable_memory=os.getenv("NICO_ENABLE_MEMORY", "false").lower() == "true",
+        enable_voice=os.getenv("NICO_ENABLE_VOICE", "true").lower() == "true",
+        # Use free options — no API keys needed
+        stt_provider=os.getenv("STT_PROVIDER", "google_free"),
+        tts_provider=os.getenv("TTS_PROVIDER", "pyttsx3"),
+        openweathermap_api_key=os.getenv("OPENWEATHERMAP_API_KEY"),
     )
