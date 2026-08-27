@@ -17,6 +17,12 @@ chmod +x start-local.sh
 ./start-local.sh
 ```
 
+To let other devices on your LAN connect:
+
+```bash
+./start-local.sh --lan
+```
+
 ## Model
 
 Default model: `qwen2.5:3b`
@@ -33,3 +39,4 @@ export OLLAMA_MODEL=gemma2:2b
 - `NICO_PROFILE=local`
 - `NICO_DEFAULT_PROVIDER=ollama`
 - Tools and cloud integrations are disabled by default
+- LAN hosting is optional: use `--lan`

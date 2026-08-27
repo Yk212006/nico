@@ -71,6 +71,7 @@ dev = [
 [project.scripts]
 nico = "nico.cli:main"
 nico-web = "nico.web_api:main"
+nico-local = "nico.local_launcher:main"
 friday = "server:main"
 friday_voice = "agent_friday:dev"
 

@@ -11,7 +11,7 @@ from typing import Any
 
 from nico.config_profiles import load_profile
 
-HOST = "0.0.0.0"
+HOST = os.getenv("NICO_BIND_HOST", "127.0.0.1")
 PORT = int(os.getenv("NICO_WEB_PORT", "8080"))
 
 HTML = """<!DOCTYPE html>
