@@ -4,10 +4,7 @@ version = "0.2.0"
 description = "NICO — A modular AI assistant for Raspberry Pi, desktop Linux, and Windows"
 readme = "README_NICO.md"
 requires-python = ">=3.11"
-dependencies = [
-    "httpx>=0.27",
-    "python-dotenv>=1.0",
-]
+dependencies = []
 
 [project.optional-dependencies]
 # Development and testing
@@ -20,6 +17,7 @@ dev = [
 [project.scripts]
 nico = "nico.cli:main"
 nico-local = "nico.local_launcher:main"
+nico-desktop = "nico.desktop_app:main"
 
 [build-system]
 requires = ["hatchling"]

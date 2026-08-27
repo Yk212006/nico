@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
+import urllib.request
 from typing import Any, AsyncIterator
-
-try:
-    import httpx
-except ModuleNotFoundError:
-    httpx = None
 
 from nico.brain.provider import BaseProvider
 
@@ -49,24 +46,27 @@ class OllamaProvider(BaseProvider):
         history: list[dict[str, Any]] | None = None,
         system_prompt: str | None = None,
     ) -> str:
-        if httpx is None:
-            return "Ollama response (httpx not installed)"
-
         try:
             messages = _history_to_messages(history)
             if system_prompt:
                 messages.insert(0, {"role": "system", "content": system_prompt})
             messages.append({"role": "user", "content": prompt})
 
-            async with httpx.AsyncClient() as client:
-                resp = await client.post(
+            def _request() -> str:
+                payload = json.dumps(
+                    {"model": self.model, "messages": messages, "stream": False}
+                ).encode("utf-8")
+                req = urllib.request.Request(
                     f"{self.base_url}/api/chat",
-                    json={"model": self.model, "messages": messages, "stream": False},
-                    timeout=120.0,
+                    data=payload,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
                 )
-                resp.raise_for_status()
-                data = resp.json()
+                with urllib.request.urlopen(req, timeout=120) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
                 return data.get("message", {}).get("content", "No response")
+
+            return await asyncio.to_thread(_request)
         except Exception as exc:
             return f"Ollama error: {exc}"
 
@@ -77,36 +77,9 @@ class OllamaProvider(BaseProvider):
         history: list[dict[str, Any]] | None = None,
         system_prompt: str | None = None,
     ) -> AsyncIterator[str]:
-        if httpx is None:
-            yield "Ollama response (httpx not installed)"
-            return
-
         try:
-            messages = _history_to_messages(history)
-            if system_prompt:
-                messages.insert(0, {"role": "system", "content": system_prompt})
-            messages.append({"role": "user", "content": prompt})
-
-            async with httpx.AsyncClient() as client:
-                async with client.stream(
-                    "POST",
-                    f"{self.base_url}/api/chat",
-                    json={"model": self.model, "messages": messages, "stream": True},
-                    timeout=300.0,
-                ) as resp:
-                    resp.raise_for_status()
-                    async for line in resp.aiter_lines():
-                        if not line.strip():
-                            continue
-                        try:
-                            data = json.loads(line)
-                            content = data.get("message", {}).get("content", "")
-                            if content:
-                                yield content
-                            if data.get("done"):
-                                break
-                        except json.JSONDecodeError:
-                            continue
+            response = await self.chat(prompt, history=history, system_prompt=system_prompt)
+            yield response
         except Exception as exc:
             yield f"Ollama stream error: {exc}"
 

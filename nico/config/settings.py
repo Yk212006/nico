@@ -4,9 +4,26 @@ import os
 from dataclasses import dataclass
 from typing import Optional
 
-from dotenv import load_dotenv
 
-load_dotenv()
+def _load_env_file(path: str = ".env") -> None:
+    """Tiny .env loader implemented with the standard library only."""
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            for raw in handle:
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                key = key.strip()
+                if not key or key in os.environ:
+                    continue
+                value = value.strip().strip('"').strip("'")
+                os.environ[key] = value
+    except FileNotFoundError:
+        pass
+
+
+_load_env_file()
 
 
 @dataclass(frozen=True)

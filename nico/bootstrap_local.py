@@ -25,6 +25,14 @@ def _run(cmd: list[str]) -> None:
 
 
 def main() -> None:
+    mode = "desktop"
+    extra_args = []
+    if len(sys.argv) > 1 and sys.argv[1] in {"desktop", "web"}:
+        mode = sys.argv[1]
+        extra_args = sys.argv[2:]
+    else:
+        extra_args = sys.argv[1:]
+
     venv_py = _venv_python()
     if not venv_py.exists():
         print("[NICO] Creating local environment...")
@@ -34,8 +42,9 @@ def main() -> None:
     _run([str(venv_py), "-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel"])
     _run([str(venv_py), "-m", "pip", "install", "-e", "."])
 
-    print("[NICO] Starting local launcher...")
-    os.execv(str(venv_py), [str(venv_py), "-m", "nico.local_launcher", *sys.argv[1:]])
+    target = "nico.desktop_app" if mode == "desktop" else "nico.local_launcher"
+    print(f"[NICO] Starting {target}...")
+    os.execv(str(venv_py), [str(venv_py), "-m", target, *extra_args])
 
 
 if __name__ == "__main__":

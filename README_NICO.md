@@ -1,42 +1,24 @@
-# NICO Offline Local Assistant
+# NICO
 
-NICO is now configured as a **local offline assistant** powered by Ollama.
-
-## What it does
-
-- Answers questions locally
-- Writes and explains code
-- Runs in a browser on the same device
-- Does not require cloud APIs by default
+Offline desktop chatbot powered by Ollama.
 
 ## Start
 
 ```bash
 git pull
-chmod +x start-local.sh
-./start-local.sh
+chmod +x start-desktop.sh
+./start-desktop.sh
 ```
 
-To let other devices on your LAN connect:
+## Default
 
-```bash
-./start-local.sh --lan
-```
+- Provider: `ollama`
+- Model: `qwen2.5:3b`
+- Mode: native desktop window
 
-## Model
-
-Default model: `qwen2.5:3b`
-
-Change it with:
+## Change model
 
 ```bash
 export OLLAMA_MODEL=gemma2:2b
-./start-local.sh
+./start-desktop.sh
 ```
-
-## Notes
-
-- `NICO_PROFILE=local`
-- `NICO_DEFAULT_PROVIDER=ollama`
-- Tools and cloud integrations are disabled by default
-- LAN hosting is optional: use `--lan`
