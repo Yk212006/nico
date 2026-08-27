@@ -10,57 +10,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Full feature set for workstations / cloud servers
-full = [
-    "httpx>=0.27",
-    "python-dotenv>=1.0",
-    "apscheduler>=3.10",
-    "feedparser>=6.0",
-    "plyer>=2.1",
-]
-# Voice features (install separately on Pi too)
-voice = [
-    "pyaudio>=0.2.14",
-    "pyttsx3>=2.90",
-    "gTTS>=2.5",
-    "openai>=1.0",
-]
-# Google workspace integrations
-google = [
-    "google-auth>=2.0",
-    "google-auth-oauthlib>=1.0",
-]
-# Google Assistant SDK (for smart home device control via Google Home)
-# Now compatible with the google group — no protobuf conflict.
-assistant = [
-    "google-auth>=2.0",
-    "google-auth-oauthlib>=1.0",
-    "google-assistant-grpc>=0.3",
-    "grpcio>=1.40",
-    "protobuf>=3.20,<5.0",
-]
-
-# All Google features (Calendar, Gmail, Drive, Classroom, Tasks + Assistant)
-# Install: pip install -e .[google,assistant]
-all-google = [
-    "nico[google]",
-    "nico[assistant]",
-]
-# Raspberry Pi hardware
-pi = [
-    "RPi.GPIO>=0.7; platform_machine in 'armv7l aarch64 armv6l'",
-    "luma.oled>=3.12; platform_machine in 'armv7l aarch64 armv6l'",
-    "adafruit-circuitpython-dht>=3.0; platform_machine in 'armv7l aarch64 armv6l'",
-]
-# WhatsApp Web messaging
-whatsapp = [
-    "playwright>=1.40",
-]
-# Web server — cloud / headless deployment
-web = [
-    "fastapi>=0.110",
-    "uvicorn[standard]>=0.27",
-]
 # Development and testing
 dev = [
     "pytest>=8.0",
@@ -70,10 +19,7 @@ dev = [
 
 [project.scripts]
 nico = "nico.cli:main"
-nico-web = "nico.web_api:main"
 nico-local = "nico.local_launcher:main"
-friday = "server:main"
-friday_voice = "agent_friday:dev"
 
 [build-system]
 requires = ["hatchling"]

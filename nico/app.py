@@ -3,16 +3,6 @@ from __future__ import annotations
 import logging
 from typing import Any, AsyncIterator
 
-from nico.audio import (
-    DefaultAudioOutput,
-    DefaultMicrophone,
-    DefaultSpeechToText,
-    DefaultTextToSpeech,
-    DefaultWakeWordDetector,
-    OpenWakeWordDetector,
-    PicovoiceWakeWordDetector,
-    VoicePipeline,
-)
 from nico.bootstrap import AppBootstrap
 from nico.brain.ollama_provider import OllamaProvider
 from nico.brain.router import ProviderRouter
@@ -65,11 +55,6 @@ class NicoApp:
 
         self.tool_manager = ToolManager()
         self.orchestrator = IntentOrchestrator(self.tool_manager)
-
-        # Voice / Audio pipeline
-        self._voice_pipeline: VoicePipeline | None = None
-        self._audio_output: DefaultAudioOutput | None = None
-        self._init_voice()
 
         # Background Services
         self.scheduler = TaskScheduler()
@@ -209,100 +194,6 @@ class NicoApp:
                 await publish(ConversationEnded())
             except Exception:
                 pass
-
-    # ------------------------------------------------------------------
-    # Voice
-    # ------------------------------------------------------------------
-
-    def _init_voice(self) -> None:
-        """Initialize voice pipeline if voice is enabled in settings."""
-        if not self.settings.enable_voice:
-            return
-
-        try:
-            mic = DefaultMicrophone(
-                device_index=self.settings.audio_input_device,
-            )
-            stt = DefaultSpeechToText(
-                provider=self.settings.stt_provider,
-                api_key=self.settings.openai_api_key,
-            )
-            tts = DefaultTextToSpeech(
-                provider=self.settings.tts_provider,
-                api_key=self.settings.openai_api_key,
-            )
-            if self.settings.picovoice_access_key:
-                try:
-                    ww = PicovoiceWakeWordDetector(
-                        access_key=self.settings.picovoice_access_key,
-                        keyword_path=self.settings.picovoice_keyword_path,
-                    )
-                    log_event(self.logger, "wakeword_picovoice")
-                except Exception as exc:
-                    log_error(self.logger, "wakeword_picovoice_failed", exc)
-                    ww = DefaultWakeWordDetector(
-                        wake_word=self.settings.wake_word,
-                    )
-            else:
-                try:
-                    ww = OpenWakeWordDetector(
-                        wake_word=self.settings.wake_word,
-                    )
-                    log_event(self.logger, "wakeword_openwakeword")
-                except Exception as exc:
-                    log_error(self.logger, "wakeword_openwakeword_failed", exc)
-                    ww = DefaultWakeWordDetector(
-                        wake_word=self.settings.wake_word,
-                    )
-
-            async def _handler(text: str) -> str:
-                return await self.chat(text)
-
-            self._voice_pipeline = VoicePipeline(
-                microphone=mic,
-                speech_to_text=stt,
-                text_to_speech=tts,
-                wake_word_detector=ww,
-                conversation_handler=_handler,
-            )
-
-            self._audio_output = DefaultAudioOutput(
-                device_index=self.settings.audio_output_device,
-            )
-
-            self.registry.register("voice_pipeline", self._voice_pipeline)
-            self.registry.register("audio_output", self._audio_output)
-
-            log_event(self.logger, "voice_initialized")
-        except Exception as exc:
-            log_error(self.logger, "voice_init_failed", exc)
-
-    @property
-    def voice_pipeline(self) -> VoicePipeline | None:
-        """Return the voice pipeline if voice is enabled, else ``None``."""
-        return self._voice_pipeline
-
-    async def voice_chat(self) -> str | None:
-        """Run a single voice conversation turn.
-
-        Returns:
-            The response text, or ``None`` if voice is not configured.
-        """
-        if self._voice_pipeline is None:
-            log_event(self.logger, "voice_unavailable")
-            return None
-
-        result = await self._voice_pipeline.process_audio()
-
-        if result.audio and self._audio_output:
-            if self.settings.enable_interruption:
-                self._audio_output.play_stream(
-                    self._voice_pipeline.text_to_speech.stream_synthesize(result.response)
-                )
-            else:
-                await self._audio_output.play(result.audio)
-
-        return result.response
 
     # ------------------------------------------------------------------
     # Vision / Image analysis
