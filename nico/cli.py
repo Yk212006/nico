@@ -18,14 +18,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     run_parser = subparsers.add_parser("run", help="Start the assistant in interactive shell/REPL mode")
     run_parser.add_argument("--provider", default=None, help="Force default AI provider to use")
-    run_parser.add_argument("--profile", default="default", help="Preset profile configuration profile to load")
+    run_parser.add_argument("--profile", default="local", help="Preset profile configuration profile to load")
     run_parser.add_argument("--profile-file", default=None, help="Path to a custom JSON profile file")
     run_parser.add_argument("--no-tools", action="store_true", help="Disable tool execution")
 
     chat_parser = subparsers.add_parser("chat", help="Send a one-shot query message and print response")
     chat_parser.add_argument("message", help="Query message string to process")
     chat_parser.add_argument("--provider", default=None, help="Force default AI provider to use")
-    chat_parser.add_argument("--profile", default="default", help="Preset profile configuration profile to load")
+    chat_parser.add_argument("--profile", default="local", help="Preset profile configuration profile to load")
     chat_parser.add_argument("--profile-file", default=None, help="Path to a custom JSON profile file")
     chat_parser.add_argument("--image", default=None, help="Path to an image file for vision analysis")
 
@@ -33,7 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
     analyze_parser.add_argument("image", help="Path to the image file")
     analyze_parser.add_argument("--prompt", default="Describe this image in detail", help="Analysis prompt")
     analyze_parser.add_argument("--provider", default=None, help="Force default AI provider to use")
-    analyze_parser.add_argument("--profile", default="default", help="Preset profile configuration")
+    analyze_parser.add_argument("--profile", default="local", help="Preset profile configuration")
     analyze_parser.add_argument("--profile-file", default=None, help="Path to a custom JSON profile file")
 
     return parser

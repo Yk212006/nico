@@ -23,6 +23,7 @@ except ImportError as e:
 
 from nico.app import NicoApp
 from nico.config.settings import Settings
+from nico.config_profiles import load_profile
 
 
 # ---------------------------------------------------------------------------
@@ -315,7 +316,17 @@ async def verify_auth(authorization: str | None = Header(None)) -> None:
 async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
     """Startup / shutdown lifecycle."""
     global _nico
-    settings = Settings.from_env()
+    profile_name = os.getenv("NICO_PROFILE", "local")
+    try:
+        profile = load_profile(profile_name)
+    except Exception:
+        profile = load_profile("local")
+
+    settings = Settings(
+        default_provider=profile["provider"],
+        enable_tools=profile["enable_tools"],
+        enable_memory=profile["enable_memory"],
+    )
     _nico = NicoApp(settings=settings)
     await _nico.lifecycle.start()
     yield

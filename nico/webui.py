@@ -9,6 +9,8 @@ import threading
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from typing import Any
 
+from nico.config_profiles import load_profile
+
 HOST = "0.0.0.0"
 PORT = int(os.getenv("NICO_WEB_PORT", "8080"))
 
@@ -183,7 +185,17 @@ def main() -> None:
     from nico.app import NicoApp
     from nico.config.settings import Settings
 
-    settings = Settings.from_env()
+    profile_name = os.getenv("NICO_PROFILE", "local")
+    try:
+        profile = load_profile(profile_name)
+    except Exception:
+        profile = load_profile("local")
+
+    settings = Settings(
+        default_provider=profile["provider"],
+        enable_tools=profile["enable_tools"],
+        enable_memory=profile["enable_memory"],
+    )
     app = NicoApp(settings=settings)
 
     _Handler.app = app

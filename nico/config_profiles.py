@@ -25,6 +25,11 @@ _PROFILES: dict[str, dict[str, Any]] = {
         "enable_tools": True,
         "enable_memory": False,
     },
+    "local": {
+        "provider": "ollama",
+        "enable_tools": False,
+        "enable_memory": True,
+    },
 }
 
 
@@ -48,7 +53,7 @@ def validate_profile(profile: dict[str, Any]) -> dict[str, Any]:
     """Validate a profile dictionary and raise ValueError on invalid settings."""
 
     provider = profile.get("provider")
-    if provider not in {"openai", "claude", "gemini", "google_assistant"}:
+    if provider not in {"openai", "claude", "gemini", "google_assistant", "ollama"}:
         raise ValueError(f"Unsupported provider: {provider}")
 
     if not isinstance(profile.get("enable_tools", True), bool):
