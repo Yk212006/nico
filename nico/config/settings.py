@@ -20,11 +20,11 @@ class Settings:
 
     # Core identity
     assistant_name: str = os.getenv("NICO_ASSISTANT_NAME", "NICO")
-    default_provider: str = os.getenv("NICO_DEFAULT_PROVIDER", "google_assistant")
+    default_provider: str = os.getenv("NICO_DEFAULT_PROVIDER", "ollama")
     log_level: str = os.getenv("NICO_LOG_LEVEL", "INFO")
 
     # Feature flags
-    enable_tools: bool = os.getenv("NICO_ENABLE_TOOLS", "true").lower() == "true"
+    enable_tools: bool = os.getenv("NICO_ENABLE_TOOLS", "false").lower() == "true"
     enable_memory: bool = os.getenv("NICO_ENABLE_MEMORY", "true").lower() == "true"
     allow_system_control: bool = (
         os.getenv("NICO_ALLOW_SYSTEM_CONTROL", "false").lower() == "true"

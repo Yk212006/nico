@@ -25,7 +25,7 @@ def _get_supported_kwargs(func, **kwargs):
 class RouterState:
     """Tracks the active provider and conversation history."""
 
-    active_provider: str = "openai"
+    active_provider: str = "ollama"
     history: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -76,7 +76,7 @@ class ProviderRouter:
     ) -> None:
         self._providers = providers
         self._state = RouterState(
-            active_provider=(default_provider or "openai").lower()
+            active_provider=(default_provider or "ollama").lower()
         )
         self._logger = get_logger("nico.router")
         self._fallback_order = [
@@ -393,26 +393,7 @@ class ProviderRouter:
         Returns the new provider name if a switch occurred, ``None`` otherwise.
         """
         lowered = command.strip().lower()
-        if lowered.startswith("use claude") or lowered.startswith("switch to claude"):
-            self.select_provider("claude")
-            return "claude"
-        if (
-            lowered.startswith("switch to gpt")
-            or lowered.startswith("use gpt")
-            or lowered.startswith("use openai")
-            or lowered.startswith("switch to openai")
-        ):
-            self.select_provider("openai")
-            return "openai"
-        if lowered.startswith("use gemini") or lowered.startswith("switch to gemini"):
-            self.select_provider("gemini")
-            return "gemini"
-        if (
-            lowered.startswith("use google assistant")
-            or lowered.startswith("switch to google assistant")
-            or lowered.startswith("use google")
-            or lowered.startswith("switch to google")
-        ):
-            self.select_provider("google_assistant")
-            return "google_assistant"
+        if lowered.startswith("use ollama") or lowered.startswith("switch to ollama"):
+            self.select_provider("ollama")
+            return "ollama"
         return None

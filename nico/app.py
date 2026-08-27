@@ -14,22 +14,15 @@ from nico.audio import (
     VoicePipeline,
 )
 from nico.bootstrap import AppBootstrap
-from nico.brain.claude_provider import ClaudeProvider
-from nico.brain.gemini_provider import GeminiProvider
-from nico.brain.google_assistant_provider import GoogleAssistantProvider
 from nico.brain.ollama_provider import OllamaProvider
-from nico.brain.openai_provider import OpenAIProvider
 from nico.brain.router import ProviderRouter
 from nico.config.settings import Settings
 from nico.config.prompts import PromptTemplates
 from nico.context import ConversationContext
-from nico.integrations.google.dispatcher import GoogleServiceDispatcher
-from nico.integrations.google_assistant import GoogleAssistantIntegration
 from nico.lifecycle import AppLifecycle
 from nico.memory.manager import MemoryManager
 from nico.orchestrator import IntentOrchestrator
 from nico.registry import ServiceRegistry
-from nico.tools import build_tool_manager
 from nico.tools.manager import ToolManager
 from nico.scheduler import TaskScheduler
 from nico.notifications import NotificationService
@@ -59,45 +52,19 @@ class NicoApp:
         self.bootstrap = AppBootstrap()
         self.registry = self.bootstrap.registry
 
-        # Configure AI Providers & Router (needed early for vision tool)
+        # Configure the local AI provider.
         providers = {
-            "openai": OpenAIProvider(
-                api_key=self.settings.openai_api_key,
-                model=self.settings.openai_model,
-            ),
-            "claude": ClaudeProvider(
-                api_key=self.settings.anthropic_api_key,
-                model=self.settings.anthropic_model,
-            ),
-            "gemini": GeminiProvider(
-                api_key=self.settings.gemini_api_key,
-                model=self.settings.gemini_model,
-            ),
             "ollama": OllamaProvider(
                 base_url=self.settings.ollama_base_url,
                 model=self.settings.ollama_model,
             ),
-            "google_assistant": GoogleAssistantProvider(
-                integration=GoogleAssistantIntegration(
-                    credentials_file=self.settings.google_credentials_file,
-                    token_file=self.settings.google_assistant_token_file,
-                    device_model_id=self.settings.google_assistant_device_model_id,
-                    device_id=self.settings.google_assistant_device_id,
-                    language_code=self.settings.google_assistant_language_code,
-                )
-            ),
         }
         self.router = ProviderRouter(
-            providers, default_provider=self.settings.default_provider
+            providers, default_provider="ollama"
         )
 
-        self.tool_manager = (
-            build_tool_manager(router=self.router, app=self) if self.settings.enable_tools else ToolManager()
-        )
+        self.tool_manager = ToolManager()
         self.orchestrator = IntentOrchestrator(self.tool_manager)
-
-        # Google service integrations
-        self.google_dispatcher = GoogleServiceDispatcher()
 
         # Voice / Audio pipeline
         self._voice_pipeline: VoicePipeline | None = None
@@ -115,7 +82,6 @@ class NicoApp:
         self.registry.register("scheduler", self.scheduler)
         self.registry.register("notifications", self.notifications)
         self.registry.register("memory_manager", self.memory_manager)
-        self.registry.register("google_dispatcher", self.google_dispatcher)
 
         # Wire lifecycle control
         self.lifecycle = AppLifecycle([self.scheduler])
@@ -181,20 +147,6 @@ class NicoApp:
             else:
                 result = controller.restart()
             return str(result)
-
-        # 2c. Integration intent (email, calendar, home)
-        if decision["intent"] == "integration":
-            action = decision.get("tool_name", "")
-            kwargs = decision.get("tool_kwargs") or {}
-            action_map = {"email": "gmail", "calendar": "calendar", "home": "home"}
-
-            mapped = action_map.get(action)
-            if mapped:
-                kwargs.pop("action", None)
-                result = await self.google_dispatcher.handle(mapped, **kwargs)
-                self.memory_manager.add_turn("user", message)
-                self.memory_manager.add_turn("assistant", f"Integration result: {result}")
-                return f"Integration result: {result}"
 
         # 3. Plain LLM Conversation chat
         self.memory_manager.add_turn("user", message)

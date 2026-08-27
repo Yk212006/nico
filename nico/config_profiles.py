@@ -5,26 +5,6 @@ from pathlib import Path
 from typing import Any
 
 _PROFILES: dict[str, dict[str, Any]] = {
-    "default": {
-        "provider": "openai",
-        "enable_tools": True,
-        "enable_memory": True,
-    },
-    "voice": {
-        "provider": "google_assistant",
-        "enable_tools": True,
-        "enable_memory": True,
-    },
-    "minimal": {
-        "provider": "gemini",
-        "enable_tools": False,
-        "enable_memory": False,
-    },
-    "pi": {
-        "provider": "google_assistant",
-        "enable_tools": True,
-        "enable_memory": False,
-    },
     "local": {
         "provider": "ollama",
         "enable_tools": False,
@@ -53,7 +33,7 @@ def validate_profile(profile: dict[str, Any]) -> dict[str, Any]:
     """Validate a profile dictionary and raise ValueError on invalid settings."""
 
     provider = profile.get("provider")
-    if provider not in {"openai", "claude", "gemini", "google_assistant", "ollama"}:
+    if provider not in {"ollama"}:
         raise ValueError(f"Unsupported provider: {provider}")
 
     if not isinstance(profile.get("enable_tools", True), bool):
