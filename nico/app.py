@@ -100,25 +100,22 @@ class NicoApp:
         if decision["intent"] == "tool":
             tool_name = decision["tool_name"]
             tool_kwargs = decision.get("tool_kwargs") or {}
-            
-            try:
-                # Execute with extracted arguments
-                tool_result = await self.tool_manager.execute(tool_name, **tool_kwargs)
-                log_event(self.logger, "tool_executed", tool_name=tool_name)
-                
-                self.memory_manager.add_turn("user", message)
-                self.memory_manager.add_turn("assistant", f"Tool result: {tool_result}")
-                
-                return f"Tool result: {tool_result}"
-            except Exception as exc:
-                log_error(self.logger, "tool_failed", exc, tool_name=tool_name)
-                return f"Error executing tool '{tool_name}': {exc}"
-            finally:
+
+            if self.tool_manager.get(tool_name) is None:
+                decision = {"intent": "chat"}
+            else:
                 try:
-                    from nico.events import ConversationEnded, publish
-                    await publish(ConversationEnded())
-                except Exception:
-                    pass
+                    # Execute with extracted arguments
+                    tool_result = await self.tool_manager.execute(tool_name, **tool_kwargs)
+                    log_event(self.logger, "tool_executed", tool_name=tool_name)
+
+                    self.memory_manager.add_turn("user", message)
+                    self.memory_manager.add_turn("assistant", f"Tool result: {tool_result}")
+
+                    return f"Tool result: {tool_result}"
+                except Exception as exc:
+                    log_error(self.logger, "tool_failed", exc, tool_name=tool_name)
+                    decision = {"intent": "chat"}
 
         # 2b. Hardware intent (shutdown, restart)
         if decision["intent"] == "hardware":

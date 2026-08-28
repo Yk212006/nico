@@ -1,20 +1,26 @@
 # NICO
 
-Offline desktop chatbot powered by Ollama.
+Offline browser chatbot powered by Ollama.
 
 ## Start
 
 ```bash
 git pull
-chmod +x start-desktop.sh
-./start-desktop.sh
+chmod +x start-local.sh
+./start-local.sh
+```
+
+For LAN access on other devices:
+
+```bash
+./start-local.sh --lan
 ```
 
 ## Default
 
 - Provider: `ollama`
 - Model: `qwen2.5:3b`
-- Mode: native desktop window
+- Mode: browser UI
 
 ## Change model
 

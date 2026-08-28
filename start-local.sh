@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-python -m nico.bootstrap_local "$@"
+python -m nico.bootstrap_local web "$@"

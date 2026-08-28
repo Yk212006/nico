@@ -25,7 +25,7 @@ def _run(cmd: list[str]) -> None:
 
 
 def main() -> None:
-    mode = "desktop"
+    mode = "web"
     extra_args = []
     if len(sys.argv) > 1 and sys.argv[1] in {"desktop", "web"}:
         mode = sys.argv[1]

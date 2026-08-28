@@ -201,17 +201,11 @@ def main() -> None:
     _Handler.app = app
     server = HTTPServer((HOST, PORT), _Handler)
 
-    print(f"")
-    print(f"  ╔══════════════════════════════════════╗")
-    print(f"  ║     NICO Web Interface               ║")
-    print(f"  ║                                      ║")
-    print(f"  ║  Open in your browser:               ║")
-    print(f"  ║  http://localhost:{PORT}                 ║")
-    print(f"  ║  or http://<pi-ip>:{PORT}                ║")
-    print(f"  ║                                      ║")
-    print(f"  ║  Press Ctrl+C to stop                ║")
-    print(f"  ╚══════════════════════════════════════╝")
-    print(f"")
+    print("")
+    print("NICO Web Interface")
+    print(f"Open: http://localhost:{PORT}")
+    print("Ctrl+C to stop")
+    print("")
 
     t = threading.Thread(target=_start_worker, args=(app,), daemon=True)
     t.start()
