@@ -22,6 +22,7 @@ HTML = """<!DOCTYPE html>
 <title>NICO Assistant</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
          background: #0f1115; color: #e8eaed; height: 100vh; display: flex;
          flex-direction: column; }
@@ -33,21 +34,21 @@ HTML = """<!DOCTYPE html>
   #header .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e;
                  display: inline-block; }
   #chat-wrap { flex: 1; display: flex; justify-content: center; overflow: hidden; }
-  #chat { width: min(860px, 100%); overflow-y: auto; padding: 22px 18px 28px; display: flex;
-          flex-direction: column; gap: 14px; }
+  #chat { width: min(1280px, 100%); overflow-y: auto; padding: 30px 28px 40px; display: flex;
+          flex-direction: column; gap: 16px; }
   .row { display: flex; width: 100%; gap: 12px; align-items: flex-start; }
   .row.user { justify-content: flex-end; }
   .avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
             flex: 0 0 auto; font-size: 12px; font-weight: 700; }
   .avatar.nico { background: #273449; color: #dbe7ff; }
   .avatar.user { background: #2563eb; color: white; }
-  .bubble { max-width: min(82%, 740px); padding: 14px 16px; border-radius: 16px; line-height: 1.6;
+  .bubble { max-width: min(90%, 940px); padding: 20px 22px; border-radius: 18px; line-height: 1.75;
             word-wrap: break-word; animation: fadeIn 0.2s; white-space: normal; }
   .bubble.user { background: #1f2937; border: 1px solid #2f3948; border-bottom-right-radius: 4px; }
   .bubble.nico { background: #141923; border: 1px solid #232938; border-bottom-left-radius: 4px; }
   .bubble.error { background: #2f1313; border: 1px solid #5a1f1f; }
   .bubble-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-  .bubble .label { font-size: 11px; color: #9aa3b2; margin-bottom: 6px; font-weight: 700; }
+  .bubble .label { font-size: 11px; color: #9aa3b2; margin-bottom: 8px; font-weight: 700; }
   .copy-btn { border: 1px solid #2e3647; background: #0f131b; color: #cbd5e1; border-radius: 10px;
               padding: 6px 10px; font-size: 12px; cursor: pointer; }
   .copy-btn:hover { background: #18202b; }
@@ -55,13 +56,13 @@ HTML = """<!DOCTYPE html>
   .bubble code { font-family: Consolas, 'Courier New', monospace; font-size: 13px; }
   .bubble .md-code { display: block; white-space: pre; }
   .bubble .md-inline { font-family: Consolas, 'Courier New', monospace; background: rgba(255,255,255,0.08); padding: 2px 5px; border-radius: 5px; }
-  #composer { border-top: 1px solid #232938; background: #11151c; padding: 14px 16px; }
-  #input-area { width: min(860px, 100%); margin: 0 auto; display: flex; gap: 10px; }
-  #input { flex: 1; padding: 14px 16px; border-radius: 14px; border: 1px solid #2a3140;
-           background: #0f131b; color: #e8eaed; font-size: 14px; outline: none; }
+  #composer { border-top: 1px solid #232938; background: #11151c; padding: 18px 20px; }
+  #input-area { width: min(1280px, 100%); margin: 0 auto; display: flex; gap: 12px; }
+  #input { flex: 1; padding: 18px 18px; border-radius: 16px; border: 1px solid #2a3140;
+           background: #0f131b; color: #e8eaed; font-size: 16px; outline: none; }
   #input:focus { border-color: #4f8cff; }
-  #send { padding: 12px 18px; border-radius: 14px; border: none; background: #2563eb;
-          color: white; font-size: 14px; font-weight: 700; cursor: pointer;
+  #send { padding: 14px 22px; border-radius: 16px; border: none; background: #2563eb;
+          color: white; font-size: 16px; font-weight: 700; cursor: pointer;
           transition: background 0.2s; }
   #send:hover { background: #1d4ed8; }
   #send:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -81,16 +82,17 @@ HTML = """<!DOCTYPE html>
 <div id="chat-wrap"><div id="chat">
   <div class="row nico"><div class="avatar nico">N</div><div class="bubble nico"><div class="label">NICO</div>Hello! I'm NICO. Ask me anything.</div></div>
 </div></div>
-<div id="composer"><div id="input-area">
+<div id="composer"><form id="input-area">
   <input id="input" type="text" placeholder="Message NICO..." autofocus>
-  <button id="send" onclick="send()">Send</button>
-</div></div>
+  <button id="send" type="submit">Send</button>
+</form></div>
 <script>
   const chat = document.getElementById('chat');
   const input = document.getElementById('input');
   const sendBtn = document.getElementById('send');
+  const form = document.getElementById('input-area');
 
-  input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+  form.addEventListener('submit', e => { e.preventDefault(); send(); });
 
   function createAssistantRow(text, isError) {
     const row = document.createElement('div');
@@ -242,24 +244,9 @@ HTML = """<!DOCTYPE html>
       });
       const assistant = createAssistantRow('', false);
       typing.remove();
-      const reader = resp.body?.getReader();
-      if (!reader) {
-        const text = await resp.text();
-        assistant.bubble.dataset.raw = text;
-        assistant.content.innerHTML = renderMarkdown(text);
-      } else {
-        let raw = '';
-        const decoder = new TextDecoder();
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          raw += decoder.decode(value, { stream: true });
-          assistant.bubble.dataset.raw = raw;
-          assistant.content.innerHTML = '<div>' + escapeHtml(raw).replace(/\n/g, '<br>') + '</div>';
-          chat.scrollTop = chat.scrollHeight;
-        }
-        assistant.content.innerHTML = renderMarkdown(raw);
-      }
+      const text = await resp.text();
+      assistant.bubble.dataset.raw = text;
+      assistant.content.innerHTML = renderMarkdown(text);
     } catch (e) {
       typing.remove();
       addMsg('nico', 'Connection error. Is the server still running?', true);
@@ -299,16 +286,15 @@ class _Handler(SimpleHTTPRequestHandler):
                     future = asyncio.run_coroutine_threadsafe(
                         self.app.chat(msg), _loop
                     )
-                    result = future.result(timeout=60)
-                    response = str(result)
+                    response = str(future.result(timeout=120))
                 except Exception as exc:
                     response = f"Error: {exc}"
 
             self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
             self.end_headers()
-            self.wfile.write(json.dumps({"response": response}).encode("utf-8"))
+            self.wfile.write(response.encode("utf-8"))
         else:
             self.send_response(404)
             self.end_headers()
