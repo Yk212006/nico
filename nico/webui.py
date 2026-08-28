@@ -23,31 +23,43 @@ HTML = """<!DOCTYPE html>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-         background: #1a1a2e; color: #e0e0e0; height: 100vh; display: flex;
+         background: #0f1115; color: #e8eaed; height: 100vh; display: flex;
          flex-direction: column; }
-  #header { background: #16213e; padding: 16px 24px; border-bottom: 1px solid #0f3460;
-            display: flex; align-items: center; gap: 12px; }
-  #header h1 { font-size: 20px; font-weight: 600; color: #e94560; }
-  #header .status { font-size: 12px; color: #888; }
-  #header .dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80;
+  #header { background: #11151c; padding: 14px 22px; border-bottom: 1px solid #232938;
+            display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  #header .left { display: flex; align-items: center; gap: 12px; }
+  #header h1 { font-size: 18px; font-weight: 700; color: #f3f4f6; }
+  #header .status { font-size: 12px; color: #8b95a7; }
+  #header .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e;
                  display: inline-block; }
-  #chat { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column;
-          gap: 12px; }
-  .msg { max-width: 80%; padding: 12px 16px; border-radius: 12px; line-height: 1.5;
-         word-wrap: break-word; animation: fadeIn 0.2s; }
-  .user { background: #0f3460; align-self: flex-end; border-bottom-right-radius: 4px; }
-  .nico { background: #16213e; align-self: flex-start; border-bottom-left-radius: 4px; }
-  .nico .label { font-size: 11px; color: #e94560; margin-bottom: 4px; font-weight: 600; }
-  .error { background: #3d0000; align-self: flex-start; border-bottom-left-radius: 4px; }
-  #input-area { display: flex; gap: 8px; padding: 16px 24px; background: #16213e;
-                border-top: 1px solid #0f3460; }
-  #input { flex: 1; padding: 12px 16px; border-radius: 8px; border: 1px solid #0f3460;
-           background: #1a1a2e; color: #e0e0e0; font-size: 14px; outline: none; }
-  #input:focus { border-color: #e94560; }
-  #send { padding: 12px 24px; border-radius: 8px; border: none; background: #e94560;
-          color: white; font-size: 14px; font-weight: 600; cursor: pointer;
+  #chat-wrap { flex: 1; display: flex; justify-content: center; overflow: hidden; }
+  #chat { width: min(860px, 100%); overflow-y: auto; padding: 22px 18px 28px; display: flex;
+          flex-direction: column; gap: 14px; }
+  .row { display: flex; width: 100%; gap: 12px; align-items: flex-start; }
+  .row.user { justify-content: flex-end; }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+            flex: 0 0 auto; font-size: 12px; font-weight: 700; }
+  .avatar.nico { background: #273449; color: #dbe7ff; }
+  .avatar.user { background: #2563eb; color: white; }
+  .bubble { max-width: min(82%, 740px); padding: 14px 16px; border-radius: 16px; line-height: 1.6;
+            word-wrap: break-word; animation: fadeIn 0.2s; white-space: normal; }
+  .bubble.user { background: #1f2937; border: 1px solid #2f3948; border-bottom-right-radius: 4px; }
+  .bubble.nico { background: #141923; border: 1px solid #232938; border-bottom-left-radius: 4px; }
+  .bubble.error { background: #2f1313; border: 1px solid #5a1f1f; }
+  .bubble .label { font-size: 11px; color: #9aa3b2; margin-bottom: 6px; font-weight: 700; }
+  .bubble pre { margin: 10px 0; padding: 12px; border-radius: 10px; background: #0b1020; overflow-x: auto; }
+  .bubble code { font-family: Consolas, 'Courier New', monospace; font-size: 13px; }
+  .bubble .md-code { display: block; white-space: pre; }
+  .bubble .md-inline { font-family: Consolas, 'Courier New', monospace; background: rgba(255,255,255,0.08); padding: 2px 5px; border-radius: 5px; }
+  #composer { border-top: 1px solid #232938; background: #11151c; padding: 14px 16px; }
+  #input-area { width: min(860px, 100%); margin: 0 auto; display: flex; gap: 10px; }
+  #input { flex: 1; padding: 14px 16px; border-radius: 14px; border: 1px solid #2a3140;
+           background: #0f131b; color: #e8eaed; font-size: 14px; outline: none; }
+  #input:focus { border-color: #4f8cff; }
+  #send { padding: 12px 18px; border-radius: 14px; border: none; background: #2563eb;
+          color: white; font-size: 14px; font-weight: 700; cursor: pointer;
           transition: background 0.2s; }
-  #send:hover { background: #d63851; }
+  #send:hover { background: #1d4ed8; }
   #send:disabled { opacity: 0.5; cursor: not-allowed; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); }
                        to { opacity: 1; transform: translateY(0); } }
@@ -59,17 +71,16 @@ HTML = """<!DOCTYPE html>
 </head>
 <body>
 <div id="header">
-  <span class="dot"></span>
-  <h1>NICO</h1>
-  <span class="status">connected</span>
+  <div class="left"><span class="dot"></span><h1>NICO</h1></div>
+  <span class="status">offline chatbot</span>
 </div>
-<div id="chat">
-  <div class="msg nico"><div class="label">NICO</div>Hello! I'm NICO. Ask me anything.</div>
-</div>
-<div id="input-area">
-  <input id="input" type="text" placeholder="Type a message..." autofocus>
+<div id="chat-wrap"><div id="chat">
+  <div class="row nico"><div class="avatar nico">N</div><div class="bubble nico"><div class="label">NICO</div>Hello! I'm NICO. Ask me anything.</div></div>
+</div></div>
+<div id="composer"><div id="input-area">
+  <input id="input" type="text" placeholder="Message NICO..." autofocus>
   <button id="send" onclick="send()">Send</button>
-</div>
+</div></div>
 <script>
   const chat = document.getElementById('chat');
   const input = document.getElementById('input');
@@ -78,16 +89,83 @@ HTML = """<!DOCTYPE html>
   input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
   function addMsg(sender, text, isError) {
-    const div = document.createElement('div');
-    div.className = 'msg ' + (isError ? 'error' : sender);
-    if (sender === 'nico') div.innerHTML = '<div class="label">NICO</div>' + escapeHtml(text);
-    else div.textContent = text;
-    chat.appendChild(div);
+    const row = document.createElement('div');
+    row.className = 'row ' + sender;
+
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar ' + sender;
+    avatar.textContent = sender === 'nico' ? 'N' : 'Y';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble ' + (isError ? 'error' : sender);
+    if (sender === 'nico') {
+      bubble.innerHTML = '<div class="label">NICO</div>' + renderMarkdown(text);
+      row.appendChild(avatar);
+      row.appendChild(bubble);
+    } else {
+      bubble.textContent = text;
+      row.appendChild(bubble);
+      row.appendChild(avatar);
+    }
+
+    chat.appendChild(row);
     chat.scrollTop = chat.scrollHeight;
   }
 
   function escapeHtml(t) {
     return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function renderMarkdown(text) {
+    const lines = String(text).split(/\r?\n/);
+    let out = '';
+    let inCode = false;
+    let codeLang = '';
+    let codeLines = [];
+
+    const flushParagraph = (paragraph) => {
+      if (!paragraph.trim()) return '';
+      return '<div>' + escapeHtml(paragraph)
+        .replace(/`([^`]+)`/g, '<span class="md-inline">$1</span>')
+        .replace(/\n/g, '<br>') + '</div>';
+    };
+
+    let paragraph = '';
+    for (const line of lines) {
+      const fence = line.match(/^```([a-zA-Z0-9_-]*)\s*$/);
+      if (fence) {
+        if (!inCode) {
+          out += flushParagraph(paragraph);
+          paragraph = '';
+          inCode = true;
+          codeLang = fence[1] || '';
+          codeLines = [];
+        } else {
+          out += '<pre><code class="md-code lang-' + escapeHtml(codeLang) + '">' +
+                 escapeHtml(codeLines.join('\n')) + '</code></pre>';
+          inCode = false;
+          codeLang = '';
+          codeLines = [];
+        }
+        continue;
+      }
+
+      if (inCode) {
+        codeLines.push(line);
+      } else if (line.trim() === '') {
+        out += flushParagraph(paragraph);
+        paragraph = '';
+      } else {
+        paragraph += (paragraph ? '\n' : '') + line;
+      }
+    }
+
+    if (inCode) {
+      out += '<pre><code class="md-code lang-' + escapeHtml(codeLang) + '">' +
+             escapeHtml(codeLines.join('\n')) + '</code></pre>';
+    }
+    out += flushParagraph(paragraph);
+    return out || '<div>' + escapeHtml(text).replace(/\n/g, '<br>') + '</div>';
   }
 
   async function send() {
