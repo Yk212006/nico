@@ -46,7 +46,11 @@ HTML = """<!DOCTYPE html>
   .bubble.user { background: #1f2937; border: 1px solid #2f3948; border-bottom-right-radius: 4px; }
   .bubble.nico { background: #141923; border: 1px solid #232938; border-bottom-left-radius: 4px; }
   .bubble.error { background: #2f1313; border: 1px solid #5a1f1f; }
+  .bubble-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
   .bubble .label { font-size: 11px; color: #9aa3b2; margin-bottom: 6px; font-weight: 700; }
+  .copy-btn { border: 1px solid #2e3647; background: #0f131b; color: #cbd5e1; border-radius: 10px;
+              padding: 6px 10px; font-size: 12px; cursor: pointer; }
+  .copy-btn:hover { background: #18202b; }
   .bubble pre { margin: 10px 0; padding: 12px; border-radius: 10px; background: #0b1020; overflow-x: auto; }
   .bubble code { font-family: Consolas, 'Courier New', monospace; font-size: 13px; }
   .bubble .md-code { display: block; white-space: pre; }
@@ -88,26 +92,73 @@ HTML = """<!DOCTYPE html>
 
   input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
-  function addMsg(sender, text, isError) {
+  function createAssistantRow(text, isError) {
     const row = document.createElement('div');
-    row.className = 'row ' + sender;
+    row.className = 'row nico';
 
     const avatar = document.createElement('div');
-    avatar.className = 'avatar ' + sender;
-    avatar.textContent = sender === 'nico' ? 'N' : 'Y';
+    avatar.className = 'avatar nico';
+    avatar.textContent = 'N';
 
     const bubble = document.createElement('div');
-    bubble.className = 'bubble ' + (isError ? 'error' : sender);
+    bubble.className = 'bubble ' + (isError ? 'error' : 'nico');
+    bubble.dataset.raw = text;
+
+    const head = document.createElement('div');
+    head.className = 'bubble-head';
+
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.textContent = 'NICO';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.type = 'button';
+    copyBtn.textContent = 'Copy';
+    copyBtn.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(bubble.dataset.raw || '');
+        copyBtn.textContent = 'Copied';
+        setTimeout(() => copyBtn.textContent = 'Copy', 1000);
+      } catch (_) {}
+    };
+
+    const content = document.createElement('div');
+    content.className = 'bubble-content';
+    content.innerHTML = isError ? escapeHtml(text).replace(/\n/g, '<br>') : renderMarkdown(text);
+
+    head.appendChild(label);
+    head.appendChild(copyBtn);
+    bubble.appendChild(head);
+    bubble.appendChild(content);
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+
+    chat.appendChild(row);
+    chat.scrollTop = chat.scrollHeight;
+
+    return { row, bubble, content };
+  }
+
+  function addMsg(sender, text, isError) {
     if (sender === 'nico') {
-      bubble.innerHTML = '<div class="label">NICO</div>' + renderMarkdown(text);
-      row.appendChild(avatar);
-      row.appendChild(bubble);
-    } else {
-      bubble.textContent = text;
-      row.appendChild(bubble);
-      row.appendChild(avatar);
+      createAssistantRow(text, isError);
+      return;
     }
 
+    const row = document.createElement('div');
+    row.className = 'row user';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble user';
+    bubble.textContent = text;
+
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar user';
+    avatar.textContent = 'Y';
+
+    row.appendChild(bubble);
+    row.appendChild(avatar);
     chat.appendChild(row);
     chat.scrollTop = chat.scrollHeight;
   }
@@ -180,7 +231,7 @@ HTML = """<!DOCTYPE html>
 
     const typing = document.createElement('div');
     typing.className = 'typing';
-    typing.textContent = 'NICO is thinking...';
+    typing.textContent = 'NICO is typing...';
     chat.appendChild(typing);
 
     try {
@@ -189,9 +240,26 @@ HTML = """<!DOCTYPE html>
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: msg }),
       });
-      const data = await resp.json();
+      const assistant = createAssistantRow('', false);
       typing.remove();
-      addMsg('nico', data.response || data.error || 'No response');
+      const reader = resp.body?.getReader();
+      if (!reader) {
+        const text = await resp.text();
+        assistant.bubble.dataset.raw = text;
+        assistant.content.innerHTML = renderMarkdown(text);
+      } else {
+        let raw = '';
+        const decoder = new TextDecoder();
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          raw += decoder.decode(value, { stream: true });
+          assistant.bubble.dataset.raw = raw;
+          assistant.content.innerHTML = '<div>' + escapeHtml(raw).replace(/\n/g, '<br>') + '</div>';
+          chat.scrollTop = chat.scrollHeight;
+        }
+        assistant.content.innerHTML = renderMarkdown(raw);
+      }
     } catch (e) {
       typing.remove();
       addMsg('nico', 'Connection error. Is the server still running?', true);
